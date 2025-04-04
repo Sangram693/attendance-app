@@ -1,0 +1,14 @@
+export '../providers/user_provider.dart';
+export '../providers/college_provider.dart';
+export '../screens/attendance_screen.dart';
+export '../screens/home_screen.dart';
+export '../screens/login_screen.dart';
+export '../screens/notice_screen.dart';
+export '../screens/otp_screen.dart';
+export '../screens/profile_screen.dart';
+export '../screens/quiz_screen.dart';
+export '../screens/scan_qr.dart';
+export '../screens/signup_screen.dart';
+export '../screens/splash_screen.dart';
+export '../screens/routine_screen.dart';
+export '../screens/exam_screen.dart';
