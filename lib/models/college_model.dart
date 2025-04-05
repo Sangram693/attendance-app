@@ -5,7 +5,7 @@ class CollegeModel {
 
   factory CollegeModel.fromJson(Map<String, dynamic> json) {
     return CollegeModel(
-      college: College.fromJson(json['College']),
+      college: College.fromJson(json['college']),
     );
   }
 }
