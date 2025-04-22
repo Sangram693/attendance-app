@@ -38,10 +38,27 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (!mounted) return;
 
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 2), () async {
       if (!mounted) return;
+      
       if (provider.isLogin) {
-        Navigator.pushNamedAndRemoveUntil(context, "/home", (route) => false);
+        String? role = await provider.getRole();
+        
+        switch (role) {
+          case 'STU_CURR':
+            Navigator.pushNamedAndRemoveUntil(context, "/home", (route) => false);
+            break;
+          case 'USR_TCHR':
+            Navigator.pushNamedAndRemoveUntil(context, "/teacherHome", (route) => false);
+            break;
+          case 'COLG_ADM':
+            Navigator.pushNamedAndRemoveUntil(context, "/collegeAdmin", (route) => false);
+            break;
+          default:
+            // If role is not recognized, logout and go to login screen
+            await provider.logout();
+            Navigator.pushNamedAndRemoveUntil(context, "/login", (route) => false);
+        }
       } else {
         Navigator.pushNamedAndRemoveUntil(context, "/login", (route) => false);
       }

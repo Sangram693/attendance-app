@@ -12,7 +12,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   void init() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    await userProvider.loadStudentDetails();
+    // await userProvider.loadStudentDetails();
   }
 
   @override
@@ -56,10 +56,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             Expanded(
               child: ListView.builder(
-                itemCount: userProvider.studentDetails.length,
+                // itemCount: userProvider.studentDetails.length,
                 itemBuilder: (context, index) {
-                  String key = userProvider.studentDetails.keys.elementAt(index);
-                  String value = userProvider.studentDetails[key] ?? "N/A";
+                  // String key = userProvider.studentDetails.keys.elementAt(index);
+                  // String value = userProvider.studentDetails[key] ?? "N/A";
 
                   return Card(
                     elevation: 3,
@@ -72,11 +72,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: EdgeInsets.symmetric(vertical: height * 0.01, horizontal: width * 0.02),
                       child: ListTile(
                         title: Text(
-                          key,
+                          "key",
                           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: width * 0.04),
                         ),
                         subtitle: Text(
-                          value,
+                          "value",
                           style: TextStyle(fontSize: width * 0.04),
                         ),
                       ),

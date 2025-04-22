@@ -90,21 +90,28 @@ class _ScanQrState extends State<ScanQr> {
   /// ✅ Send scanned QR code & location to the API for attendance
   Future<void> markAttendance(String qrCode) async {
     final provider = Provider.of<UserProvider>(context, listen: false);
+    
+    // Check for both device ID and user ID
     final String? deviceId = await provider.getStudentData("deviceId");
-    if (deviceId == null) {
+    final String? userId = await provider.getStudentData("userId");
+    
+    if (deviceId == null || userId == null) {
       setState(() {
-        qrText = "Error: access denied";
+        qrText = "Error: User not properly authenticated";
         color = Colors.red;
         isScanning = false;
       });
       return;
     }
+
     Position? position = await _getCurrentLocation();
     if (position == null) return;
+
     final bool success = await provider.giveAttendance(
         position.latitude, position.longitude, qrCode, deviceId);
     final player = AudioPlayer();
     await player.play(AssetSource('sound.mp3'));
+    
     if (success) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -134,11 +141,42 @@ class _ScanQrState extends State<ScanQr> {
         });
 
         if (scanData.code != null) {
-          String scannedJson = scanData.code!;
-          Map<String, dynamic> scannedCode = jsonDecode(scannedJson);
+          try {
+            final provider = Provider.of<UserProvider>(context, listen: false);
+            String? deviceId = await provider.getStudentData("deviceId");
+            
+            if (deviceId == null) {
+              setState(() {
+                qrText = "Device not authorized";
+                color = Colors.red;
+              });
+              return;
+            }
 
-          if (scannedCode.isNotEmpty) {
-            await markAttendance(scannedCode['classId']); // ✅ Mark attendance
+            String scannedJson = scanData.code!;
+            Map<String, dynamic> scannedCode = jsonDecode(scannedJson);
+
+            if (scannedCode.containsKey('courseId') && 
+                scannedCode.containsKey('subjectId') && 
+                scannedCode.containsKey('classId')) {
+              // Format the data as needed for the API
+              String attendanceData = json.encode({
+                'courseId': scannedCode['courseId'],
+                'subjectId': scannedCode['subjectId'],
+                'classId': scannedCode['classId']
+              });
+              await markAttendance(attendanceData);
+            } else {
+              setState(() {
+                qrText = "Invalid QR Code format";
+                color = Colors.red;
+              });
+            }
+          } catch (e) {
+            setState(() {
+              qrText = "Error reading QR Code";
+              color = Colors.red;
+            });
           }
         }
       }

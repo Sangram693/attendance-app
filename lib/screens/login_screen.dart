@@ -10,28 +10,47 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _controllerEmail = TextEditingController();
+  final TextEditingController _controllerUserId = TextEditingController();
+  final TextEditingController _controllerPassword = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   void showMessage(String msg, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: Colors.black87, // Better contrast for readability
+        backgroundColor: Colors.black87,
         content: Text(msg, style: const TextStyle(color: Colors.white)),
       ),
     );
+  }
+
+  Future<void> _handleLoginSuccess(BuildContext context, UserProvider provider) async {
+    String? role = await provider.getRole();
+    if (role == null) return;
+
+    if (!context.mounted) return;
+
+    switch (role) {
+      case 'STU_CURR':
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 'USR_TCHR':
+        Navigator.pushReplacementNamed(context, '/teacherHome');
+        break;
+      case 'COLG_ADM':
+        Navigator.pushReplacementNamed(context, '/collegeAdmin');
+        break;
+      default:
+        showMessage("Unknown user role", Colors.red);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final double height = MediaQuery.of(context).size.height;
     final double width = MediaQuery.of(context).size.width;
-    final style =
-        TextStyle(fontWeight: FontWeight.w400, fontSize: height * 0.025);
-
+    final style = TextStyle(fontWeight: FontWeight.w400, fontSize: height * 0.025);
     final decoration = InputDecoration(
-      border:
-          OutlineInputBorder(borderRadius: BorderRadius.circular(width * 0.02)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(width * 0.02)),
       isDense: true,
       contentPadding: EdgeInsets.all(height * 0.01),
     );
@@ -59,7 +78,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Logo
                     Container(
                       width: width,
                       height: height * 0.2,
@@ -71,110 +89,127 @@ class _LoginScreenState extends State<LoginScreen> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text("Email", style: style),
+                        Text("User ID", style: style),
                         Text("*", style: style.copyWith(color: Colors.red)),
                       ],
                     ),
-                    // Email Field
                     TextFormField(
-                      controller: _controllerEmail,
-                      keyboardType: TextInputType.emailAddress,
+                      controller: _controllerUserId,
                       decoration: decoration.copyWith(
-                          prefixIcon: const Icon(Icons.mail),
-                          hintText: "Enter your email"),
+                        prefixIcon: const Icon(Icons.person),
+                        hintText: "Enter your user ID"
+                      ),
                       validator: (String? value) {
                         if (value == null || value.isEmpty) {
-                          return "Please enter your email";
+                          return "Please enter your user ID";
                         }
-                        if (!RegExp(
-                                r"^[a-zA-Z0-9.a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-                            .hasMatch(value)) {
-                          return "Please enter a valid email";
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: height * 0.03),
+                    
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text("Password", style: style),
+                        Text("*", style: style.copyWith(color: Colors.red)),
+                      ],
+                    ),
+                    TextFormField(
+                      controller: _controllerPassword,
+                      obscureText: true,
+                      decoration: decoration.copyWith(
+                        prefixIcon: const Icon(Icons.lock),
+                        hintText: "Enter your password"
+                      ),
+                      validator: (String? value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please enter your password";
                         }
                         return null;
                       },
                     ),
                     SizedBox(height: height * 0.03),
 
-                    // Gradient Button (Fixed)
                     Consumer<UserProvider>(
                       builder: (context, provider, child) {
                         return Ink(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                                colors: provider.isLoading
-                                    ? [Colors.grey, Colors.grey]
-                                    : [Colors.purple, Colors.indigo]),
-                            borderRadius: BorderRadius.circular(
-                                MediaQuery.of(context).size.width * 0.02),
+                              colors: provider.isLoading
+                                ? [Colors.grey, Colors.grey]
+                                : [Colors.purple, Colors.indigo]
+                            ),
+                            borderRadius: BorderRadius.circular(width * 0.02),
                           ),
                           child: InkWell(
                             onTap: provider.isLoading
-                                ? null
-                                : () async {
-                                    if (_formKey.currentState!.validate()) {
-                                      provider.setLoading(
-                                          true); // Ensure you have a method to update isLoading
-                                      final bool success = await provider
-                                          .sendOtp(_controllerEmail.text);
-                                      provider.setLoading(false);
+                              ? null
+                              : () async {
+                                  if (_formKey.currentState!.validate()) {
+                                    provider.setLoading(true);
+                                    final bool success = await provider.login(
+                                      userId: _controllerUserId.text,
+                                      password: _controllerPassword.text,
+                                    );
+                                    provider.setLoading(false);
 
-                                      if (success) {
-                                        otpScreen();
-                                      } else {
-                                        showMessage("OTP not sent", Colors.red);
-                                      }
+                                    if (success) {
+                                      await _handleLoginSuccess(context, provider);
+                                    } else {
+                                      showMessage(
+                                        provider.errorMessage.isNotEmpty
+                                          ? provider.errorMessage
+                                          : "Login failed",
+                                        Colors.red
+                                      );
                                     }
-                                  },
-                            borderRadius: BorderRadius.circular(
-                                MediaQuery.of(context).size.width * 0.02),
+                                  }
+                                },
+                            borderRadius: BorderRadius.circular(width * 0.02),
                             child: Container(
                               alignment: Alignment.center,
-                              padding: EdgeInsets.symmetric(
-                                  vertical: MediaQuery.of(context).size.height *
-                                      0.015),
+                              padding: EdgeInsets.symmetric(vertical: height * 0.015),
                               width: double.infinity,
                               child: provider.isLoading
-                                  ? const CircularProgressIndicator(
-                                      color: Colors.white)
-                                  : Text("Send OTP",
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w400,
-                                          fontSize: MediaQuery.of(context)
-                                                  .size
-                                                  .height *
-                                              0.025,
-                                          color: Colors.white)),
+                                ? const CircularProgressIndicator(color: Colors.white)
+                                : Text(
+                                    "Login",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w400,
+                                      fontSize: height * 0.025,
+                                      color: Colors.white
+                                    )
+                                  ),
                             ),
                           ),
                         );
                       },
-                    )
+                    ),
                   ],
                 ),
               ),
             ),
           ),
-          // Top Banner
           Container(
             height: height * 0.2,
             width: width,
             alignment: Alignment.center,
             padding: EdgeInsets.symmetric(vertical: height * 0.05),
             decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                    colors: [Colors.purple, Colors.indigo]),
-                borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(width * 0.5))),
+              gradient: const LinearGradient(colors: [Colors.purple, Colors.indigo]),
+              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(width * 0.5))
+            ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Text(
                   "Welcome",
                   style: TextStyle(
-                      fontSize: height * 0.04,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.white),
+                    fontSize: height * 0.04,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.white
+                  ),
                 ),
               ],
             ),
@@ -182,10 +217,5 @@ class _LoginScreenState extends State<LoginScreen> {
         ],
       ),
     );
-  }
-
-  void otpScreen() {
-    Navigator.pushNamed(context, "/otp",
-        arguments: {"email": _controllerEmail.text});
   }
 }
