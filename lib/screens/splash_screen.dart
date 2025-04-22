@@ -43,7 +43,7 @@ class _SplashScreenState extends State<SplashScreen> {
       
       if (provider.isLogin) {
         String? role = await provider.getRole();
-        
+        if(!mounted)return;
         switch (role) {
           case 'STU_CURR':
             Navigator.pushNamedAndRemoveUntil(context, "/home", (route) => false);
@@ -57,6 +57,7 @@ class _SplashScreenState extends State<SplashScreen> {
           default:
             // If role is not recognized, logout and go to login screen
             await provider.logout();
+            if(!mounted)return;
             Navigator.pushNamedAndRemoveUntil(context, "/login", (route) => false);
         }
       } else {

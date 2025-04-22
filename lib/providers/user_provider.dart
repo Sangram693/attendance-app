@@ -39,39 +39,33 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
-
   // Save login status and token securely
-  Future<void> _saveLoginStatus(String token, bool oldStudent, String role, {String? collegeId}) async {
+  Future<void> _saveLoginStatus(String token, String role, {String? collegeId}) async {
     await _storage.write(key: "token", value: token);
-    await _storage.write(key: "oldStudent", value: oldStudent.toString());
     await _storage.write(key: "role", value: role);
     if (collegeId != null) {
       await _storage.write(key: "collegeId", value: collegeId);
     }
-
-    _isLogin = oldStudent;
-    _oldStudent = oldStudent;
+    
+    // Set login state based on token presence
+    _isLogin = token.isNotEmpty;
+    await _storage.write(key: "isLogin", value: _isLogin.toString());
     notifyListeners();
-  }
-
-  Future<String?> getStudentData(String key) async {
-    return await _storage.read(key: key);
   }
 
   // Load login status and token from storage
   Future<void> loadLoginStatus() async {
     String? token = await _storage.read(key: "token");
-    String? oldStudentValue = await _storage.read(key: "oldStudent");
+    String? isLoginValue = await _storage.read(key: "isLogin");
 
-    if (token != null && oldStudentValue != null) {
-      _isLogin = oldStudentValue == "true";
-      _oldStudent = oldStudentValue == "true";
-    } else {
-      _isLogin = false;
-      _oldStudent = false;
-    }
+    _isLogin = isLoginValue == "true" && token != null && token.isNotEmpty;
+    _oldStudent = _isLogin; // Sync oldStudent with login state
 
     notifyListeners();
+  }
+
+  Future<String?> getStudentData(String key) async {
+    return await _storage.read(key: key);
   }
 
   Future<bool> login({required String userId, required String password}) async {
@@ -101,7 +95,7 @@ class UserProvider with ChangeNotifier {
           // Save both device ID and user ID
           await _storage.write(key: "deviceId", value: deviceId);
           await _storage.write(key: "userId", value: userId);
-          await _saveLoginStatus(token, isStudent, role, collegeId: collegeId);
+          await _saveLoginStatus(token, role, collegeId: collegeId);
           _setSuccessMessage("Login successful");
           return true;
         }
@@ -174,7 +168,7 @@ class UserProvider with ChangeNotifier {
 
   // Logout and clear stored data
   Future<bool> logout() async {
-    await _saveLoginStatus("", false, "");
+    await _saveLoginStatus("", "");
     _isLogin = false;
     _oldStudent = false;
     notifyListeners();

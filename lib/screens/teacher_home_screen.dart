@@ -47,7 +47,7 @@ class TeacherHomeScreen extends StatelessWidget {
             context,
             'View Attendance',
             Icons.list_alt,
-            () => Navigator.pushNamed(context, '/viewAttendance'),
+            () => Navigator.pushNamed(context, '/attendance'),
           ),
           _buildMenuCard(
             context,

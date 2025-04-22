@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'app_constant/app_import.dart';
 import 'providers/course_provider.dart';
+import 'screens/not_found_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -41,6 +42,9 @@ class MyApp extends StatelessWidget {
           "/routine": (context) => const RoutineScreen(),
           "/exam": (context) => const ExamScreen(),
         },
+        onUnknownRoute: (settings) => MaterialPageRoute(
+          builder: (context) => const NotFoundScreen(), // <-- Your custom fallback screen
+        ),
       ),
     );
   }

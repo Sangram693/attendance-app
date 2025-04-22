@@ -1,314 +1,298 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/course_provider.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 class GenerateQrScreen extends StatefulWidget {
-  const GenerateQrScreen({Key? key}) : super(key: key);
+  const GenerateQrScreen({super.key});
 
   @override
   State<GenerateQrScreen> createState() => _GenerateQrScreenState();
 }
 
 class _GenerateQrScreenState extends State<GenerateQrScreen> {
-  final _formKey = GlobalKey<FormState>();
-  String? _selectedCourseId;
-  String? _selectedSubjectId;
-  final TextEditingController _classIdController = TextEditingController();
-  TextEditingController _courseController = TextEditingController();
-  TextEditingController _subjectController = TextEditingController();
-  bool _showQR = false;
+  final TextEditingController _controller = TextEditingController();
+  final _key = GlobalKey<FormState>();
+  GlobalKey _courseAutoCompleteKey = GlobalKey();
+  GlobalKey _subjectAutoCompleteKey = GlobalKey();
 
-  void _resetForm() {
-    setState(() {
-      _showQR = false;
-      _selectedCourseId = null;
-      _selectedSubjectId = null;
-      _classIdController.clear();
-      _courseController.clear();
-      _subjectController.clear();
-    });
-    Provider.of<CourseProvider>(context, listen: false).clearQrData();
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void resetAutoComplete(CourseProvider provider) {
+    provider.clearQrData();
+    provider.setCourse("", "");
+    provider.setSubject("", "");
+    _controller.clear();
+    _courseAutoCompleteKey = GlobalKey();
+    _subjectAutoCompleteKey = GlobalKey();
+  }
+
+  void showMessage(String msg, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.white,
+        content: Text(
+          msg,
+          style: TextStyle(fontWeight: FontWeight.bold, color: color),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final height = MediaQuery.of(context).size.height;
-    final width = MediaQuery.of(context).size.width;
-    
+    final double width = MediaQuery.of(context).size.width;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Generate QR Code'),
+        title: const Text("Generate QR Code"),
         foregroundColor: Colors.white,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
               colors: [Colors.purple, Colors.indigo],
             ),
           ),
         ),
       ),
-      body: Padding(
-        padding: EdgeInsets.all(width * 0.04),
-        child: Consumer<CourseProvider>(
-          builder: (context, provider, child) {
-            if (provider.qrData != null || provider.qrImage != null) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(width * 0.04),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(width * 0.02),
-                        border: Border.all(color: Colors.purple.withOpacity(0.3)),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            'Course: ${_courseController.text}',
-                            style: TextStyle(
-                              fontSize: height * 0.022,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.purple,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          SizedBox(height: height * 0.01),
-                          Text(
-                            'Subject: ${_subjectController.text}',
-                            style: TextStyle(
-                              fontSize: height * 0.022,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.purple,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          SizedBox(height: height * 0.02),
-                          provider.qrImage != null
-                              ? Image.memory(
-                                  provider.qrImage!,
-                                  width: width * 0.8,
-                                  height: width * 0.8,
-                                )
-                              : QrImageView(
-                                  data: provider.qrData!,
-                                  version: QrVersions.auto,
-                                  size: width * 0.8,
-                                ),
-                          SizedBox(height: height * 0.02),
-                          Text(
-                            'Class ID: ${_classIdController.text}',
-                            style: TextStyle(
-                              fontSize: height * 0.022,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.purple,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          SizedBox(height: height * 0.04),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _resetForm,
-                              icon: const Icon(Icons.check_circle_outline, color: Colors.white),
-                              label: Text(
-                                'Complete Class',
-                                style: TextStyle(
-                                  fontSize: height * 0.02,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                padding: EdgeInsets.symmetric(vertical: height * 0.02),
-                                backgroundColor: Colors.purple,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(width * 0.02),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-            // Show form view
-            return Form(
-              key: _formKey,
+      body: Consumer<CourseProvider>(
+        builder: (context, provider, _) {
+          return Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(width * 0.1),
+            child: Form(
+              key: _key,
               child: SingleChildScrollView(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Text(
-                      'Select Course',
-                      style: TextStyle(
-                        fontSize: height * 0.02,
-                        fontWeight: FontWeight.bold,
+                    if (provider.qrImage == null) ...[
+                      buildDropdown(
+                        context,
+                        width,
+                        "Course",
+                        "*",
+                        _courseAutoCompleteKey,
+                        (value) async {
+                          await provider.getCourses(value);
+                          return provider.courses
+                              .map((e) => e["name"].toString())
+                              .toList();
+                        },
+                        (selection) {
+                          final id = provider.courses
+                              .firstWhere((e) => e["name"] == selection)["id"];
+                          provider.setCourse(selection, id.toString());
+                        },
                       ),
-                    ),
-                    SizedBox(height: height * 0.01),
-                    Autocomplete<Map<String, dynamic>>(
-                      displayStringForOption: (option) => option['name'] ?? '',
-                      optionsBuilder: (TextEditingValue textEditingValue) async {
-                        if (textEditingValue.text.length > 2) {
-                          await provider.getCourses(textEditingValue.text);
-                          return provider.courses;
-                        }
-                        return const Iterable<Map<String, dynamic>>.empty();
-                      },
-                      onSelected: (Map<String, dynamic> selection) {
-                        setState(() {
-                          _selectedCourseId = selection['id'];
-                          _courseController.text = selection['name'];
-                        });
-                      },
-                      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                        _courseController = controller;
-                        return TextFormField(
-                          controller: controller,
-                          focusNode: focusNode,
-                          decoration: InputDecoration(
-                            hintText: 'Type to search courses...',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(width * 0.02),
-                            ),
-                          ),
-                          validator: (value) {
-                            if (_selectedCourseId == null) {
-                              return 'Please select a course';
-                            }
-                            return null;
-                          },
-                        );
-                      },
-                    ),
-                    SizedBox(height: height * 0.02),
-                    Text(
-                      'Select Subject',
-                      style: TextStyle(
-                        fontSize: height * 0.02,
-                        fontWeight: FontWeight.bold,
+                      SizedBox(height: width * 0.03),
+                      buildDropdown(
+                        context,
+                        width,
+                        "Subject",
+                        "*",
+                        _subjectAutoCompleteKey,
+                        (value) async {
+                          await provider.getSubjects(value);
+                          return provider.subjects
+                              .map((e) => e["name"].toString())
+                              .toList();
+                        },
+                        (selection) {
+                          final id = provider.subjects
+                              .firstWhere((e) => e["name"] == selection)["id"];
+                          provider.setSubject(selection, id.toString());
+                        },
                       ),
-                    ),
-                    SizedBox(height: height * 0.01),
-                    Autocomplete<Map<String, dynamic>>(
-                      displayStringForOption: (option) => option['name'] ?? '',
-                      optionsBuilder: (TextEditingValue textEditingValue) async {
-                        if (textEditingValue.text.length > 2) {
-                          await provider.getSubjects(textEditingValue.text);
-                          return provider.subjects;
-                        }
-                        return const Iterable<Map<String, dynamic>>.empty();
-                      },
-                      onSelected: (Map<String, dynamic> selection) {
-                        setState(() {
-                          _selectedSubjectId = selection['id'];
-                          _subjectController.text = selection['name'];
-                        });
-                      },
-                      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                        _subjectController = controller;
-                        return TextFormField(
-                          controller: controller,
-                          focusNode: focusNode,
-                          decoration: InputDecoration(
-                            hintText: 'Type to search subjects...',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(width * 0.02),
-                            ),
-                          ),
-                          validator: (value) {
-                            if (_selectedSubjectId == null) {
-                              return 'Please select a subject';
-                            }
-                            return null;
-                          },
-                        );
-                      },
-                    ),
-                    SizedBox(height: height * 0.02),
-                    Text(
-                      'Class ID',
-                      style: TextStyle(
-                        fontSize: height * 0.02,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: height * 0.01),
-                    TextFormField(
-                      controller: _classIdController,
-                      decoration: InputDecoration(
-                        hintText: 'Enter class ID',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(width * 0.02),
+                      SizedBox(height: width * 0.03),
+                      buildLabel(width, "Class", required: true),
+                      SizedBox(height: width * 0.02),
+                      TextFormField(
+                        controller: _controller,
+                        decoration: InputDecoration(
+                          border: const OutlineInputBorder(),
+                          contentPadding:
+                              EdgeInsets.symmetric(horizontal: width * 0.02),
+                          hintText: "Enter class here",
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a class ID';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: height * 0.02),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: provider.isLoading
-                            ? null
-                            : () async {
-                                if (_formKey.currentState!.validate()) {
-                                  provider.setLoading(true);
-                                  final success = await provider.generateQR(
-                                    courseId: _selectedCourseId!,
-                                    subjectId: _selectedSubjectId!,
-                                    classId: _classIdController.text,
-                                  );
-                                  provider.setLoading(false);
-
-                                  if (!success && mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(provider.errorMessage),
-                                        backgroundColor: Colors.red,
-                                      ),
+                      SizedBox(height: width * 0.03),
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(width * 0.01),
+                          gradient: LinearGradient(
+                            colors: provider.isLoading
+                                ? [Colors.grey, Colors.grey]
+                                : [Colors.purple, Colors.indigo],
+                          ),
+                        ),
+                        child: ElevatedButton(
+                          onPressed: provider.isLoading
+                              ? null
+                              : () async {
+                                  if (_key.currentState!.validate() &&
+                                      provider.courseId != null &&
+                                      provider.subjectId != null) {
+                                    provider.setLoading(true);
+                                    bool success = await provider.generateQR(
+                                      courseId: provider.courseId!,
+                                      subjectId: provider.subjectId!,
+                                      classId: _controller.text,
                                     );
-                                  } else {
-                                    setState(() {
-                                      _showQR = true;
-                                    });
+                                    provider.setLoading(false);
+                                    if (!success) {
+                                      showMessage(
+                                          provider.errorMessage, Colors.red);
+                                    }
                                   }
-                                }
-                              },
-                        style: ElevatedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: height * 0.02),
-                          backgroundColor: Colors.purple,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(width * 0.02),
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(width * 0.01),
+                            ),
+                            fixedSize: Size.fromWidth(width),
+                          ),
+                          child: provider.isLoading
+                              ? const CircularProgressIndicator(
+                                  valueColor:
+                                      AlwaysStoppedAnimation(Colors.white),
+                                )
+                              : const Text(
+                                  "SUBMIT",
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                    if (provider.qrImage != null) ...[
+                      Image.memory(
+                        provider.qrImage!,
+                        width: 300,
+                        height: 300,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) =>
+                            const Text("Failed to load QR code"),
+                      ),
+                      const SizedBox(height: 20),
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(width * 0.01),
+                          gradient: const LinearGradient(
+                            colors: [Colors.purple, Colors.indigo],
                           ),
                         ),
-                        child: provider.isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : Text(
-                                'Generate QR Code',
-                                style: TextStyle(
-                                  fontSize: height * 0.02,
-                                  color: Colors.white,
-                                ),
-                              ),
+                        child: ElevatedButton(
+                          onPressed: () => resetAutoComplete(provider),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text(
+                            "Class Completed",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                    ]
                   ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget buildLabel(double width, String label, {bool required = false}) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: width * 0.04),
+        ),
+        if (required)
+          Text("*",
+              style: TextStyle(color: Colors.red, fontSize: width * 0.04)),
+      ],
+    );
+  }
+
+  Widget buildDropdown(
+    BuildContext context,
+    double width,
+    String label,
+    String requiredMark,
+    Key key,
+    Future<List<String>> Function(String) optionsBuilder,
+    void Function(String) onSelected,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        buildLabel(width, label, required: true),
+        SizedBox(height: width * 0.02),
+        Autocomplete<String>(
+          key: key,
+          optionsBuilder: (TextEditingValue textEditingValue) async {
+            if (textEditingValue.text.isEmpty) {
+              return const Iterable<String>.empty();
+            }
+            return await optionsBuilder(textEditingValue.text);
+          },
+          onSelected: onSelected,
+          fieldViewBuilder:
+              (context, controller, focusNode, onEditingComplete) {
+            return TextFormField(
+              controller: controller,
+              focusNode: focusNode,
+              onEditingComplete: onEditingComplete,
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: width * 0.02),
+                hintText: "Start typing to select $label.",
+              ),
+            );
+          },
+          optionsViewBuilder: (context, onSelected, options) {
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 4.0,
+                child: Container(
+                  width: width * 0.8,
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    itemCount: options.length,
+                    itemBuilder: (context, index) {
+                      final option = options.elementAt(index);
+                      return ListTile(
+                        title: Text(option),
+                        onTap: () => onSelected(option),
+                      );
+                    },
+                  ),
                 ),
               ),
             );
           },
         ),
-      ),
+      ],
     );
   }
 }
