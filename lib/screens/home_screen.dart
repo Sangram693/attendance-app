@@ -44,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Text(
           studentName != null && studentName!.isNotEmpty
               ? "Welcome, $studentName"
-              : "Welcome, Guest",
+              : "Welcome, User",
         )),
         centerTitle: true,
         foregroundColor: Colors.white,
@@ -54,68 +54,60 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(
-            horizontal: width * 0.04, vertical: height * 0.01),
-        child: Column(
-          children: [
-            Container(
-              height: height * 0.2,
-              width: width * 0.6,
-              alignment: Alignment.center,
-              child: const Image(image: AssetImage("assets/aimtech logo.png")),
-            ),
-            Expanded(
-              child: GridView(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount:2,
-                  crossAxisSpacing: width * 0.03,
-                  mainAxisSpacing: width * 0.03,
-                  childAspectRatio: 1.5, // Adjust ratio dynamically
-                ),
-                children: [
-                  _buildGridItem(context, "Scan QR", Icons.qr_code_scanner,
-                      Colors.orange, width, height, () {
-                    whichScreen("/scan");
-                  }),
-                  _buildGridItem(context, "Attendance", Icons.history,
-                      Colors.blue, width, height, () {
-                    whichScreen("/attendance");
-                  }),
-                  _buildGridItem(context, "Profile", Icons.person, Colors.green,
-                      width, height, () {
-                    whichScreen("/profile");
-                  }),
-                  _buildGridItem(context, "Routine", Icons.schedule,
-                      Colors.teal, width, height, () {
-                        whichScreen("/routine");
-                      }),
-                  _buildGridItem(
-                      context, "Quiz", Icons.quiz, Colors.pink, width, height,
-                      () {
-                    whichScreen("/quiz");
-                  }),
-                  _buildGridItem(context, "Notice", Icons.notifications_active,
-                      Colors.purple, width, height, () {
-                    whichScreen("/notice");
-                  }),
-                  _buildGridItem(context, "Exam", Icons.edit_note,
-                      Colors.cyan, width, height, () {
-                        whichScreen("/exam");
-                      }),
-                  _buildGridItem(context, "Logout", Icons.exit_to_app,
-                      Colors.red, width, height, () async {
-                    final bool success =
-                        await Provider.of<UserProvider>(context, listen: false)
-                            .logout();
-                    if (success) {
-                      navigateLogin();
-                    }
-                  }),
-                ],
+      body: Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+              horizontal: width * 0.04, vertical: height * 0.02),
+          child: Expanded(
+            child: GridView(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount:2,
+                crossAxisSpacing: width * 0.03,
+                mainAxisSpacing: width * 0.03,
+                childAspectRatio: 1.5, // Adjust ratio dynamically
               ),
+              children: [
+                _buildGridItem(context, "Scan QR", Icons.qr_code_scanner,
+                    Colors.orange, width, height, () {
+                  whichScreen("/scan");
+                }),
+                _buildGridItem(context, "Attendance", Icons.history,
+                    Colors.blue, width, height, () {
+                  whichScreen("/attendance");
+                }),
+                _buildGridItem(context, "Profile", Icons.person, Colors.green,
+                    width, height, () {
+                  whichScreen("/profile");
+                }),
+                _buildGridItem(context, "Routine", Icons.schedule,
+                    Colors.teal, width, height, () {
+                      whichScreen("/routine");
+                    }),
+                _buildGridItem(
+                    context, "Quiz", Icons.quiz, Colors.pink, width, height,
+                    () {
+                  whichScreen("/quiz");
+                }),
+                _buildGridItem(context, "Notice", Icons.notifications_active,
+                    Colors.purple, width, height, () {
+                  whichScreen("/notice");
+                }),
+                _buildGridItem(context, "Exam", Icons.edit_note,
+                    Colors.cyan, width, height, () {
+                      whichScreen("/exam");
+                    }),
+                _buildGridItem(context, "Logout", Icons.exit_to_app,
+                    Colors.red, width, height, () async {
+                  final bool success =
+                      await Provider.of<UserProvider>(context, listen: false)
+                          .logout();
+                  if (success) {
+                    navigateLogin();
+                  }
+                }),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

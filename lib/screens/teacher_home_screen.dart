@@ -7,6 +7,8 @@ class TeacherHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double height = MediaQuery.of(context).size.height;
+    final double width = MediaQuery.of(context).size.width;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Teacher Dashboard'),
@@ -32,32 +34,38 @@ class TeacherHomeScreen extends StatelessWidget {
         ],
       ),
       body: GridView.count(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.symmetric(
+            horizontal: width * 0.04, vertical: height * 0.02),
         crossAxisCount: 2,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
+        crossAxisSpacing: width * 0.03,
+        mainAxisSpacing: width * 0.03,
+        childAspectRatio: 1.5,
         children: [
           _buildMenuCard(
             context,
             'Generate QR',
+            const Color(0xffF25022),
             Icons.qr_code,
             () => Navigator.pushNamed(context, '/generateQr'),
           ),
           _buildMenuCard(
             context,
             'View Attendance',
+            const Color(0xff7FBA00),
             Icons.list_alt,
             () => Navigator.pushNamed(context, '/attendance'),
           ),
           _buildMenuCard(
             context,
             'Profile',
+            const Color(0xff00A4EF),
             Icons.person,
             () => Navigator.pushNamed(context, '/profile'),
           ),
           _buildMenuCard(
             context,
             'Notice Board',
+            const Color(0xffFFB900),
             Icons.notifications,
             () => Navigator.pushNamed(context, '/notice'),
           ),
@@ -69,6 +77,7 @@ class TeacherHomeScreen extends StatelessWidget {
   Widget _buildMenuCard(
     BuildContext context,
     String title,
+    Color color,
     IconData icon,
     VoidCallback onTap,
   ) {
@@ -82,8 +91,8 @@ class TeacherHomeScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Container(
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Colors.purple, Colors.indigo],
+            gradient: LinearGradient(
+              colors: [color, color],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
