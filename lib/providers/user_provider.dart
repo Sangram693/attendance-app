@@ -39,28 +39,18 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
   }
 
+
   // Save login status and token securely
   Future<void> _saveLoginStatus(String token, String role, {String? collegeId}) async {
     await _storage.write(key: "token", value: token);
+
     await _storage.write(key: "role", value: role);
     if (collegeId != null) {
       await _storage.write(key: "collegeId", value: collegeId);
     }
-    
-    // Set login state based on token presence
-    _isLogin = token.isNotEmpty;
-    await _storage.write(key: "isLogin", value: _isLogin.toString());
-    notifyListeners();
-  }
 
-  // Load login status and token from storage
-  Future<void> loadLoginStatus() async {
-    String? token = await _storage.read(key: "token");
-    String? isLoginValue = await _storage.read(key: "isLogin");
-
-    _isLogin = isLoginValue == "true" && token != null && token.isNotEmpty;
-    _oldStudent = _isLogin; // Sync oldStudent with login state
-
+    _isLogin = oldStudent;
+    _oldStudent = oldStudent;
     notifyListeners();
   }
 
@@ -68,11 +58,27 @@ class UserProvider with ChangeNotifier {
     return await _storage.read(key: key);
   }
 
+  // Load login status and token from storage
+  Future<void> loadLoginStatus() async {
+    String? token = await _storage.read(key: "token");
+    String? oldStudentValue = await _storage.read(key: "oldStudent");
+
+    if (token != null && oldStudentValue != null) {
+      _isLogin = oldStudentValue == "true";
+      _oldStudent = oldStudentValue == "true";
+    } else {
+      _isLogin = false;
+      _oldStudent = false;
+    }
+
+    notifyListeners();
+  }
+
   Future<bool> login({required String userId, required String password}) async {
     const uri = "${ApiUrls.baseUrl}${ApiUrls.login}";
     try {
       String deviceId = await _getDeviceId();
-      
+
       final response = await http.post(
         Uri.parse(uri),
         headers: {"Content-Type": "application/json"},
@@ -90,12 +96,19 @@ class UserProvider with ChangeNotifier {
           String token = responseData['token'];
           String role = responseData['role'] ?? '';
           String? collegeId = responseData['collegeId'];
-          
+
           bool isStudent = role == 'STU_CURR';
           // Save both device ID and user ID
           await _storage.write(key: "deviceId", value: deviceId);
           await _storage.write(key: "userId", value: userId);
           await _saveLoginStatus(token, role, collegeId: collegeId);
+
+          // Save credentials if 'Remember Me' is checked
+          if (await _storage.read(key: "rememberMe") == "true") {
+            await _storage.write(key: "savedUserId", value: userId);
+            await _storage.write(key: "savedPassword", value: password);
+          }
+
           _setSuccessMessage("Login successful");
           return true;
         }
@@ -155,6 +168,7 @@ class UserProvider with ChangeNotifier {
         _successMessage = data['message'] ?? 'Attendance marked successfully';
         return true;
       } else {
+        print("sangram: ${response.statusCode}");
         final Map<String, dynamic> data = json.decode(response.body);
         _errorMessage = data['message'] ?? 'Failed to mark attendance';
         print("Sending body: $body\nStatus code: ${response.statusCode}, Response:${response.body}");
@@ -168,6 +182,8 @@ class UserProvider with ChangeNotifier {
 
   // Logout and clear stored data
   Future<bool> logout() async {
+    // await _storage.delete(key: "userId"); // Clear stored user ID
+    // await _storage.delete(key: "password"); // Clear stored password
     await _saveLoginStatus("", "");
     _isLogin = false;
     _oldStudent = false;

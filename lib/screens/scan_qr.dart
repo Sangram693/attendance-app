@@ -1,11 +1,9 @@
 import 'package:aimtech/app_constant/app_import.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:geolocator/geolocator.dart';
 
@@ -23,31 +21,38 @@ class _ScanQrState extends State<ScanQr> {
   Color color = Colors.black;
   bool isScanning = true;
   bool hasPermissions = false;
+  bool _isRequestingPermission = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _checkLocationPermission();
-    _checkCameraPermission();
+    _checkPermissions();
   }
 
-  /// ✅ Check and request camera permission
-  Future<void> _checkCameraPermission() async {
-    var status = await Permission.camera.request();
-    if (status.isGranted) {
-      setState(() => hasPermissions = true);
-    } else if (status.isPermanentlyDenied) {
-      _showSettingsDialog("Camera");
-    }
-  }
+  /// ✅ Check and request both camera and location permissions
+  Future<void> _checkPermissions() async {
+    if (_isRequestingPermission) return;
+    _isRequestingPermission = true;
 
-  /// ✅ Check and request location permission
-  Future<void> _checkLocationPermission() async {
-    var status = await Permission.location.request();
-    if (status.isGranted) {
-      setState(() => hasPermissions = true);
-    } else if (status.isPermanentlyDenied) {
-      _showSettingsDialog("Location");
+    try {
+      Map<Permission, PermissionStatus> statuses = await [
+        Permission.camera,
+        Permission.location
+      ].request();
+
+      if (statuses[Permission.camera]?.isGranted == true &&
+          statuses[Permission.location]?.isGranted == true) {
+        setState(() => hasPermissions = true);
+      } else {
+        if (statuses[Permission.camera]?.isPermanentlyDenied == true) {
+          _showSettingsDialog("Camera");
+        }
+        if (statuses[Permission.location]?.isPermanentlyDenied == true) {
+          _showSettingsDialog("Location");
+        }
+      }
+    } finally {
+      _isRequestingPermission = false;
     }
   }
 
@@ -166,6 +171,8 @@ class _ScanQrState extends State<ScanQr> {
                 'classId': scannedCode['classId']
               });
               await markAttendance(attendanceData);
+              print("sangram: $scannedCode");
+              print("roygupta: $attendanceData");
             } else {
               setState(() {
                 qrText = "Invalid QR Code format";
@@ -174,6 +181,7 @@ class _ScanQrState extends State<ScanQr> {
             }
           } catch (e) {
             setState(() {
+              print("sangram: $e");
               qrText = "Error reading QR Code";
               color = Colors.red;
             });

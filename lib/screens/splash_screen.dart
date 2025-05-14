@@ -2,6 +2,7 @@ import 'package:aimtech/providers/user_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:in_app_update/in_app_update.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -36,14 +37,16 @@ class _SplashScreenState extends State<SplashScreen> {
     final provider = Provider.of<UserProvider>(context, listen: false);
     await provider.loadLoginStatus();
 
+    String? isLoggedIn = await const FlutterSecureStorage().read(key: "isLoggedIn");
+
     if (!mounted) return;
 
     Future.delayed(const Duration(seconds: 2), () async {
       if (!mounted) return;
-      
-      if (provider.isLogin) {
+
+      if (isLoggedIn == "true") {
         String? role = await provider.getRole();
-        if(!mounted)return;
+        if (!mounted) return;
         switch (role) {
           case 'STU_CURR':
             Navigator.pushNamedAndRemoveUntil(context, "/home", (route) => false);
@@ -57,10 +60,12 @@ class _SplashScreenState extends State<SplashScreen> {
           default:
             // If role is not recognized, logout and go to login screen
             await provider.logout();
-            if(!mounted)return;
+            if (!mounted) return;
             Navigator.pushNamedAndRemoveUntil(context, "/login", (route) => false);
         }
       } else {
+        // Ensure credentials are cleared if not logged in
+        await provider.logout();
         Navigator.pushNamedAndRemoveUntil(context, "/login", (route) => false);
       }
     });

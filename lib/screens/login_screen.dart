@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../providers/user_provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -13,6 +14,28 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _controllerUserId = TextEditingController();
   final TextEditingController _controllerPassword = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(); // Secure storage instance
+  bool _isPasswordVisible = false;
+  bool _rememberMe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials(); // Load saved credentials on initialization
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    String? savedUserId = await _secureStorage.read(key: "savedUserId");
+    String? savedPassword = await _secureStorage.read(key: "savedPassword");
+
+    if (savedUserId != null && savedPassword != null) {
+      setState(() {
+        _controllerUserId.text = savedUserId;
+        _controllerPassword.text = savedPassword;
+        _rememberMe = true;
+      });
+    }
+  }
 
   void showMessage(String msg, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -21,6 +44,20 @@ class _LoginScreenState extends State<LoginScreen> {
         content: Text(msg, style: const TextStyle(color: Colors.white)),
       ),
     );
+  }
+
+  Future<void> _saveCredentials(String userId, String password) async {
+    if (_rememberMe) {
+      await _secureStorage.write(key: "savedUserId", value: userId);
+      await _secureStorage.write(key: "savedPassword", value: password);
+    } else {
+      await _secureStorage.delete(key: "savedUserId");
+      await _secureStorage.delete(key: "savedPassword");
+    }
+  }
+
+  Future<void> _saveLoginStatus(bool isLoggedIn) async {
+    await _secureStorage.write(key: "isLoggedIn", value: isLoggedIn ? "true" : "false");
   }
 
   Future<void> _handleLoginSuccess(BuildContext context, UserProvider provider) async {
@@ -117,10 +154,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     TextFormField(
                       controller: _controllerPassword,
-                      obscureText: true,
+                      obscureText: !_isPasswordVisible, // Use the state variable to toggle visibility
                       decoration: decoration.copyWith(
                         prefixIcon: const Icon(Icons.lock),
-                        hintText: "Enter your password"
+                        hintText: "Enter your password",
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isPasswordVisible = !_isPasswordVisible;
+                            });
+                          },
+                        ),
                       ),
                       validator: (String? value) {
                         if (value == null || value.isEmpty) {
@@ -128,6 +175,21 @@ class _LoginScreenState extends State<LoginScreen> {
                         }
                         return null;
                       },
+                    ),
+                    SizedBox(height: height * 0.03),
+
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _rememberMe,
+                          onChanged: (bool? value) {
+                            setState(() {
+                              _rememberMe = value ?? false;
+                            });
+                          },
+                        ),
+                        Text("Remember Me", style: style),
+                      ],
                     ),
                     SizedBox(height: height * 0.03),
 
@@ -155,6 +217,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                     provider.setLoading(false);
 
                                     if (success) {
+                                      await _saveCredentials(
+                                        _controllerUserId.text,
+                                        _controllerPassword.text,
+                                      );
+                                      await _saveLoginStatus(true); // Save login status
                                       await _handleLoginSuccess(context, provider);
                                     } else {
                                       showMessage(
